@@ -1,4 +1,3 @@
-//not working refactored
 #include "Arduino.h"
 
 #include <hal/nrf_timer.h>
@@ -28,9 +27,10 @@ static nrfx_gpiote_in_config_t cfg =
     };
 
 /* 
- * This function enables the pin edge detection and tries to understand the current electrical state of the pin 
- * If the hardware detection event is enabled on an edge of the pin, it's not possible to understand if the edge was detected
- * In such case, TIMEOUT_US constant is returned to indicate this edge condition 
+ * This function enables the pin edge detection hardware and tries to understand the state of the pin at the time of such activation
+ * If the hardware detection event is enabled on an edge of the pin, it's not possible to understand if that edge would be detected or not
+ * In such case, TIMEOUT_US constant is returned to indicate this extreme condition 
+ * Else, if the function is able to understand the state of the pin at the time of activation, it returns the index of the desired pulse 
 */
 static uint8_t measurePulse(PinName pin, PinStatus state, nrf_ppi_channel_group_t firstGroup) 
 {
@@ -62,6 +62,8 @@ static uint8_t measurePulse(PinName pin, PinStatus state, nrf_ppi_channel_group_
 // Try also to use the pin as regular input after this function call, then try it as interrupt pin
 // Also the serial_api.c from NRF sdk uses ppi channels, so check that UART still works after many execution of this function
 // What happens if the pin was already configured as interrupt pin? given that interrupt configuration already uses gpiote event it should give an error
+// The disadvantage of this approach is that some pulses could be missed, and more time could be necessary for retrying the measure. 
+// Using two different events for rising and falling edge would be way better
 unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 {
     /* Configure timer */
@@ -124,7 +126,7 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
                                     (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_SECOND_CAPTURE));
     nrf_ppi_channel_endpoint_setup(thirdPPIchannelControl, 
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    (uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup)   );
+                                    (uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup));
 
     uint8_t pulseToTake = TIMEOUT_US;
     auto startMicros = micros();
@@ -147,6 +149,9 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     unsigned long pulseTime = TIMEOUT_US;
     unsigned long pulseFirst = TIMEOUT_US;
     unsigned long pulseSecond = TIMEOUT_US;
+
+    /* Restart the time reference because here there is the real wait for the pulse */
+    startMicros = micros();
 
     if (pulseToTake >= 1) {
         while (!pulseFirst && (micros() - startMicros < timeout) ) {
