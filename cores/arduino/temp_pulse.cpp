@@ -132,13 +132,16 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     nrfx_ppi_channel_include_in_group(thirdPPIchannelControl, thirdGroup);
 
     /* Configure PPI channels for Start and Stop events */
-    nrf_ppi_channel_and_fork_endpoint_setup(firstPPIchannel,
+    nrf_ppi_channel_endpoint_setup(firstPPIchannel,
+    //nrf_ppi_channel_and_fork_endpoint_setup(firstPPIchannel,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     //(uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_STARTED_CAPTURE),
                                     //(uint32_t) nrf_timer_task_address_get(TIMEOUT_TIMER, NRF_TIMER_TASK_STOP),
                                     //(uint32_t) nrf_timer_task_address_get(TEST_TIMER, NRF_TIMER_TASK_COUNT),
-                                    (uint32_t) nrf_timer_task_address_get(TEST_TIMER, NRF_TIMER_TASK_CAPTURE0),
+
+                                    //(uint32_t) nrf_timer_task_address_get(TEST_TIMER, NRF_TIMER_TASK_CAPTURE0),
                                     (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, NRF_TIMER_TASK_START));
+
                                     //(uint32_t) nrf_timer_task_address_get(TEMP_TIMER, NRF_TIMER_TASK_START),
                                     //(uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_STARTED_CAPTURE));
     nrf_ppi_channel_and_fork_endpoint_setup(firstPPIchannelControl,
@@ -147,11 +150,13 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
                                     (uint32_t) nrfx_ppi_task_addr_group_disable_get(firstGroup));
 
     //nrf_ppi_channel_endpoint_setup(secondPPIchannel, 
-    nrf_ppi_channel_and_fork_endpoint_setup(secondPPIchannel, 
+    nrf_ppi_channel_endpoint_setup(secondPPIchannel, 
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    //(uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_FIRST_CAPTURE));
-                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_FIRST_CAPTURE),
-                                    (uint32_t) nrf_timer_task_address_get(TIMEOUT_TIMER, NRF_TIMER_TASK_STOP));
+                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_FIRST_CAPTURE));
+
+                                    //(uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_FIRST_CAPTURE),
+                                    //(uint32_t) nrf_timer_task_address_get(TIMEOUT_TIMER, NRF_TIMER_TASK_STOP));
+
     nrf_ppi_channel_and_fork_endpoint_setup(secondPPIchannelControl,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     (uint32_t) nrfx_ppi_task_addr_group_enable_get(thirdGroup),
@@ -159,14 +164,18 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 
     nrf_ppi_channel_and_fork_endpoint_setup(thirdPPIchannel,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    (uint32_t) nrf_timer_task_address_get(TIMEOUT_TIMER, NRF_TIMER_TASK_STOP),
+
+                                    //(uint32_t) nrf_timer_task_address_get(TIMEOUT_TIMER, NRF_TIMER_TASK_STOP),
+                                    
+                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, NRF_TIMER_TASK_STOP),
                                     (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_SECOND_CAPTURE));
-    //nrf_ppi_channel_endpoint_setup(thirdPPIchannelControl, 
-    nrf_ppi_channel_and_fork_endpoint_setup(thirdPPIchannelControl, 
+    nrf_ppi_channel_endpoint_setup(thirdPPIchannelControl, 
+    //nrf_ppi_channel_and_fork_endpoint_setup(thirdPPIchannelControl, 
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     //(uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup));
-                                    (uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup),
-                                    (uint32_t) nrf_timer_task_address_get(TEST_TIMER, NRF_TIMER_TASK_STOP));
+
+                                    (uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup)   );//,
+                                    //(uint32_t) nrf_timer_task_address_get(TEST_TIMER, NRF_TIMER_TASK_STOP));
 
 
 #define EXT_FUNC
@@ -179,6 +188,18 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     //while (startState == TIMEOUT_US && remainingTime > 0) {
 
         pulseToTake = measurePulse(pin, state, firstGroup);
+
+        //if (pulseToTake == TIMEOUT_US) {
+        while (pulseToTake == TIMEOUT_US) {
+            nrf_ppi_group_disable(firstGroup);
+            nrf_ppi_group_disable(secondGroup);
+            nrf_ppi_group_disable(thirdGroup);
+            nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_STOP);
+            nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_CLEAR);
+            nrf_timer_cc_write(TEMP_TIMER, TIMER_FIRST_CHANNEL, 0);
+            nrf_timer_cc_write(TEMP_TIMER, TIMER_SECOND_CHANNEL, 0);
+            pulseToTake = measurePulse(pin, state, firstGroup);
+        }
         
         /*
         if (startState == TIMEOUT_US) {
@@ -275,25 +296,29 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 
     
 
-    unsigned long pulseTime = 0;
-    unsigned long pulseFirst = 0;
-    unsigned long pulseSecond = 0;
+    unsigned long pulseTime = TIMEOUT_US;
+    unsigned long pulseFirst = TIMEOUT_US;
+    unsigned long pulseSecond = TIMEOUT_US;
 
     //uint8_t pulseToTake = startState;
 
+    unsigned long startMicros = micros();
+
+/*
     if (!pulseToTake) {
         pulseTime = TIMEOUT_US;
     }
+*/
 
     if (pulseToTake >= 1) {
-        while (!pulseFirst) {
+        while (!pulseFirst && (micros() - startMicros < timeout) ) {
             pulseFirst = nrf_timer_cc_read(TEMP_TIMER, TIMER_FIRST_CHANNEL);
         }
         pulseTime = pulseFirst;
     }
 
     if (pulseToTake == 2) {
-        while (!pulseSecond) {
+        while (!pulseSecond && (micros() - startMicros < timeout) ) {
             pulseSecond = nrf_timer_cc_read(TEMP_TIMER, TIMER_SECOND_CHANNEL);
         }
         pulseTime = (uint32_t) ( (int)pulseSecond - (int)pulseFirst);
