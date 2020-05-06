@@ -1,0 +1,51 @@
+From 813f0e3c22f59dc74bc285e926a79b1268825958 Mon Sep 17 00:00:00 2001
+From: Paolo Calao <paolo.calao@gmail.com>
+Date: Wed, 6 May 2020 17:34:31 +0200
+Subject: [PATCH] removed static from channel_free and alloc (gpiote.h)
+
+---
+ .../modules/nrfx/drivers/include/nrfx_gpiote.h               | 4 ++++
+ .../TARGET_SDK_15_0/modules/nrfx/drivers/src/nrfx_gpiote.c   | 5 ++---
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/include/nrfx_gpiote.h b/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/include/nrfx_gpiote.h
+index ee79e6d94f..d315cd270b 100644
+--- a/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/include/nrfx_gpiote.h
++++ b/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/include/nrfx_gpiote.h
+@@ -213,6 +213,10 @@ bool nrfx_gpiote_is_init(void);
+  */
+ void nrfx_gpiote_uninit(void);
+ 
++int8_t channel_port_alloc(uint32_t pin, nrfx_gpiote_evt_handler_t handler, bool channel);
++
++void channel_free(uint8_t channel_id);
++
+ /**
+  * @brief Function for initializing a GPIOTE output pin.
+  * @details The output pin can be controlled by the CPU or by PPI. The initial
+diff --git a/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/src/nrfx_gpiote.c b/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/src/nrfx_gpiote.c
+index 8412b60ad6..0f6c99817e 100644
+--- a/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/src/nrfx_gpiote.c
++++ b/targets/TARGET_NORDIC/TARGET_NRF5x/TARGET_SDK_15_0/modules/nrfx/drivers/src/nrfx_gpiote.c
+@@ -189,8 +189,7 @@ __STATIC_INLINE nrfx_gpiote_evt_handler_t channel_handler_get(uint32_t channel)
+     return m_cb.handlers[channel];
+ }
+ 
+-
+-static int8_t channel_port_alloc(uint32_t pin, nrfx_gpiote_evt_handler_t handler, bool channel)
++int8_t channel_port_alloc(uint32_t pin, nrfx_gpiote_evt_handler_t handler, bool channel)
+ {
+     int8_t   channel_id = NO_CHANNELS;
+     uint32_t i;
+@@ -215,7 +214,7 @@ static int8_t channel_port_alloc(uint32_t pin, nrfx_gpiote_evt_handler_t handler
+ }
+ 
+ 
+-static void channel_free(uint8_t channel_id)
++void channel_free(uint8_t channel_id)
+ {
+     m_cb.handlers[channel_id] = FORBIDDEN_HANDLER_ADDRESS;
+     if (channel_id >= GPIOTE_CH_NUM)
+-- 
+2.17.1
+
