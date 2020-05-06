@@ -8,7 +8,7 @@
 #include "nrfx_ppi.h"
 
 /* Hot encoded peripherals. Could be chosen with a more clever strategy */
-#define TEMP_TIMER (NRF_TIMER2)
+#define PULSE_TIMER (NRF_TIMER2)
 #define TIMER_FIRST_CHANNEL (NRF_TIMER_CC_CHANNEL1)
 #define TIMER_SECOND_CHANNEL (NRF_TIMER_CC_CHANNEL2)
 #define TIMER_FIRST_CAPTURE (NRF_TIMER_TASK_CAPTURE1)
@@ -23,7 +23,7 @@ static nrfx_gpiote_in_config_t cfg =
         .pull = NRF_GPIO_PIN_NOPULL,                
         .is_watcher = false,                       
         .hi_accuracy = true,                     
-        .skip_gpio_setup = true //the pin is assumed to be already configured as an input pin
+        .skip_gpio_setup = true // skip pin setup, the pin is assumed to be already configured 
     };
 
 /* 
@@ -31,7 +31,7 @@ static nrfx_gpiote_in_config_t cfg =
  * If the hardware detection event is enabled on an edge of the pin, it's not possible to understand if that edge would be detected or not
  * In such case, TIMEOUT_US constant is returned to indicate this extreme condition 
  * Else, if the function is able to understand the state of the pin at the time of activation, it returns the index of the desired pulse 
-*/
+ */
 static uint8_t measurePulse(PinName pin, PinStatus state, nrf_ppi_channel_group_t firstGroup) 
 {
     /* three different reads are needed, because it's not easy to synchronize hardware and software */
@@ -58,22 +58,22 @@ static uint8_t measurePulse(PinName pin, PinStatus state, nrf_ppi_channel_group_
     return pulseToTake;
 }
 
-// Try to use other output and input pins before and after the use of this function. Also try them in interrupt configuration
-// Try also to use the pin as regular input after this function call, then try it as interrupt pin
-// Also the serial_api.c from NRF sdk uses ppi channels, so check that UART still works after many execution of this function
-// What happens if the pin was already configured as interrupt pin? given that interrupt configuration already uses gpiote event it should give an error
-// The disadvantage of this approach is that some pulses could be missed, and more time could be necessary for retrying the measure. 
-// Using two different events for rising and falling edge would be way better
+/*
+ * The pulse pin is assumed to be already configured as an input pin and NOT as an interrupt pin
+ * Also the serial_api.c from NRF sdk uses ppi channels, but there shouldn't be any issue 
+ * The disadvantage of this approach is that some pulses could be missed, and more time could be necessary for retrying the measure. 
+ * Using two different events for rising and falling edge would be way better
+ */
 unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 {
     /* Configure timer */
-    nrf_timer_mode_set(TEMP_TIMER, NRF_TIMER_MODE_TIMER);
-    nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_STOP);
-    nrf_timer_frequency_set(TEMP_TIMER, NRF_TIMER_FREQ_1MHz); 
-    nrf_timer_bit_width_set(TEMP_TIMER, NRF_TIMER_BIT_WIDTH_32);
-    nrf_timer_cc_write(TEMP_TIMER, TIMER_FIRST_CHANNEL, 0);
-    nrf_timer_cc_write(TEMP_TIMER, TIMER_SECOND_CHANNEL, 0);
-    nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_CLEAR);
+    nrf_timer_mode_set(PULSE_TIMER, NRF_TIMER_MODE_TIMER);
+    nrf_timer_task_trigger(PULSE_TIMER, NRF_TIMER_TASK_STOP);
+    nrf_timer_frequency_set(PULSE_TIMER, NRF_TIMER_FREQ_1MHz); 
+    nrf_timer_bit_width_set(PULSE_TIMER, NRF_TIMER_BIT_WIDTH_32);
+    nrf_timer_cc_write(PULSE_TIMER, TIMER_FIRST_CHANNEL, 0);
+    nrf_timer_cc_write(PULSE_TIMER, TIMER_SECOND_CHANNEL, 0);
+    nrf_timer_task_trigger(PULSE_TIMER, NRF_TIMER_TASK_CLEAR);
     /* Configure pin Toggle Event */
     nrfx_gpiote_in_init(pin, &cfg, NULL);
     nrfx_gpiote_in_event_enable(pin, true); 
@@ -106,7 +106,7 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     /* The first edge on the pin will trigger the timer START task */
     nrf_ppi_channel_endpoint_setup(firstPPIchannel,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, NRF_TIMER_TASK_START));
+                                    (uint32_t) nrf_timer_task_address_get(PULSE_TIMER, NRF_TIMER_TASK_START));
     nrf_ppi_channel_and_fork_endpoint_setup(firstPPIchannelControl,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     (uint32_t) nrfx_ppi_task_addr_group_enable_get(secondGroup),
@@ -114,7 +114,7 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     /* The second edge will result in a capture of the timer counter into a register. In this way the first impulse is captured */
     nrf_ppi_channel_endpoint_setup(secondPPIchannel, 
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_FIRST_CAPTURE));
+                                    (uint32_t) nrf_timer_task_address_get(PULSE_TIMER, TIMER_FIRST_CAPTURE));
     nrf_ppi_channel_and_fork_endpoint_setup(secondPPIchannelControl,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     (uint32_t) nrfx_ppi_task_addr_group_enable_get(thirdGroup),
@@ -122,8 +122,8 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     /* The third edge will capture the second impulse. After that, the pulse corresponding to the correct state must be returned */
     nrf_ppi_channel_and_fork_endpoint_setup(thirdPPIchannel,
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
-                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, NRF_TIMER_TASK_STOP),
-                                    (uint32_t) nrf_timer_task_address_get(TEMP_TIMER, TIMER_SECOND_CAPTURE));
+                                    (uint32_t) nrf_timer_task_address_get(PULSE_TIMER, NRF_TIMER_TASK_STOP),
+                                    (uint32_t) nrf_timer_task_address_get(PULSE_TIMER, TIMER_SECOND_CAPTURE));
     nrf_ppi_channel_endpoint_setup(thirdPPIchannelControl, 
                                     (uint32_t) nrfx_gpiote_in_event_addr_get(pin),
                                     (uint32_t) nrfx_ppi_task_addr_group_disable_get(thirdGroup));
@@ -138,10 +138,10 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
         nrf_ppi_group_disable(secondGroup);
         nrf_ppi_group_disable(thirdGroup);
         /* Stop the timer and clear its registers */
-        nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_STOP);
-        nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_CLEAR);
-        nrf_timer_cc_write(TEMP_TIMER, TIMER_FIRST_CHANNEL, 0);
-        nrf_timer_cc_write(TEMP_TIMER, TIMER_SECOND_CHANNEL, 0);
+        nrf_timer_task_trigger(PULSE_TIMER, NRF_TIMER_TASK_STOP);
+        nrf_timer_task_trigger(PULSE_TIMER, NRF_TIMER_TASK_CLEAR);
+        nrf_timer_cc_write(PULSE_TIMER, TIMER_FIRST_CHANNEL, 0);
+        nrf_timer_cc_write(PULSE_TIMER, TIMER_SECOND_CHANNEL, 0);
         /* Retry to enable the detection hardware figuring out the starting state of the pin */
         pulseToTake = measurePulse(pin, state, firstGroup);
     }
@@ -155,20 +155,20 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 
     if (pulseToTake >= 1) {
         while (!pulseFirst && (micros() - startMicros < timeout) ) {
-            pulseFirst = nrf_timer_cc_read(TEMP_TIMER, TIMER_FIRST_CHANNEL);
+            pulseFirst = nrf_timer_cc_read(PULSE_TIMER, TIMER_FIRST_CHANNEL);
         }
         pulseTime = pulseFirst;
     }
 
     if (pulseToTake == 2) {
         while (!pulseSecond && (micros() - startMicros < timeout) ) {
-            pulseSecond = nrf_timer_cc_read(TEMP_TIMER, TIMER_SECOND_CHANNEL);
+            pulseSecond = nrf_timer_cc_read(PULSE_TIMER, TIMER_SECOND_CHANNEL);
         }
         pulseTime = (uint32_t) ( (int)pulseSecond - (int)pulseFirst);
     }
     
     /* Deallocate all the PPI channels, events and groups */    
-    nrf_timer_task_trigger(TEMP_TIMER, NRF_TIMER_TASK_SHUTDOWN);
+    nrf_timer_task_trigger(PULSE_TIMER, NRF_TIMER_TASK_SHUTDOWN);
     nrfx_gpiote_in_uninit(pin);
     nrfx_ppi_group_free(firstGroup);
     nrfx_ppi_group_free(secondGroup);
@@ -190,4 +190,14 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
 unsigned long pulseIn(uint8_t pin, uint8_t state, unsigned long timeout)
 {
     return pulseIn(digitalPinToPinName(pin), (PinStatus)state, timeout);
+}
+
+unsigned long pulseInLong(uint8_t pin, uint8_t state, unsigned long timeout)
+{
+    return pulseIn(digitalPinToPinName(pin), (PinStatus)state, timeout);
+}
+
+unsigned long pulseInLong(PinName pin, PinStatus state, unsigned long timeout)
+{
+    return pulseIn(pin, state, timeout);
 }
