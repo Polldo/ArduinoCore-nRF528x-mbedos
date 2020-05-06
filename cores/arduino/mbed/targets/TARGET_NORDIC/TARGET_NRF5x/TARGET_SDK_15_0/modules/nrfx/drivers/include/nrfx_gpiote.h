@@ -213,6 +213,10 @@ bool nrfx_gpiote_is_init(void);
  */
 void nrfx_gpiote_uninit(void);
 
+int8_t channel_port_alloc(uint32_t pin, nrfx_gpiote_evt_handler_t handler, bool channel);
+
+void channel_free(uint8_t channel_id);
+
 /**
  * @brief Function for initializing a GPIOTE output pin.
  * @details The output pin can be controlled by the CPU or by PPI. The initial
