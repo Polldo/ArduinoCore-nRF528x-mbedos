@@ -150,8 +150,8 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
     unsigned long pulseFirst = TIMEOUT_US;
     unsigned long pulseSecond = TIMEOUT_US;
 
-    /* Restart the time reference because here there is the real wait for the pulse */
-    startMicros = micros();
+    /* Optionally the time reference could be restarted because here the actual wait for the pulse begins */
+    //startMicros = micros();
 
     if (pulseToTake >= 1) {
         while (!pulseFirst && (micros() - startMicros < timeout) ) {
@@ -164,7 +164,7 @@ unsigned long pulseIn(PinName pin, PinStatus state, unsigned long timeout)
         while (!pulseSecond && (micros() - startMicros < timeout) ) {
             pulseSecond = nrf_timer_cc_read(PULSE_TIMER, TIMER_SECOND_CHANNEL);
         }
-        pulseTime = (uint32_t) ( (int)pulseSecond - (int)pulseFirst);
+        pulseTime = pulseSecond ? (uint32_t) ( (int)pulseSecond - (int)pulseFirst) : TIMEOUT_US;
     }
     
     /* Deallocate all the PPI channels, events and groups */    
