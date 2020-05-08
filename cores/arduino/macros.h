@@ -24,6 +24,7 @@
 #ifdef USE_ARDUINO_PINOUT
 
 #define analogPinToPinName(P)			(P < A0 ? g_APinDescription[P+A0].name : g_APinDescription[P].name)
+#define analogPinToAdcObj(P)		    (g_APinDescription[P].adc)
 #define digitalPinToPinName(P)			(g_APinDescription[P].name)
 #define digitalPinToInterrupt(P)		(P)
 #define digitalPinToInterruptObj(P)		(g_APinDescription[P].irq)

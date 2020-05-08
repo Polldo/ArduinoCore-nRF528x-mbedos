@@ -73,6 +73,7 @@ extern "C"{
 // We provide analogReadResolution and analogWriteResolution APIs
 void analogReadResolution(int bits);
 void analogWriteResolution(int bits);
+void analogReconfigure(pin_size_t pin);
 
 #ifdef __cplusplus
 } // extern "C"
@@ -86,6 +87,7 @@ typedef struct _PinDescription
   PinName name;
   mbed::InterruptIn* irq;
   mbed::PwmOut* pwm;
+  mbed::AnalogIn* adc;
 } PinDescription ;
 
 /* Pins table to be instantiated into variant.cpp */
