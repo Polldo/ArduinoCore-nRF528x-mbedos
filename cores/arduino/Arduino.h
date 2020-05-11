@@ -70,10 +70,21 @@ extern "C"{
 #define interrupts()        __enable_irq()
 #define noInterrupts()      __disable_irq()
 
+/* Analog reference options 
+ * Different possibilities available combining Reference and Gain
+ * 
+ */
+typedef enum
+{
+  VDD,
+  INTERNAL
+} AnalogReferenceMode;
+
 // We provide analogReadResolution and analogWriteResolution APIs
 void analogReadResolution(int bits);
 void analogWriteResolution(int bits);
-void analogReconfigure(pin_size_t pin);
+void analogReference(uint8_t mode);
+
 
 #ifdef __cplusplus
 } // extern "C"
@@ -87,11 +98,17 @@ typedef struct _PinDescription
   PinName name;
   mbed::InterruptIn* irq;
   mbed::PwmOut* pwm;
-  mbed::AnalogIn* adc;
 } PinDescription ;
+
+typedef struct _AnalogPinDescription
+{
+  PinName name;
+  mbed::AnalogIn* adc;
+} AnalogPinDescription ;
 
 /* Pins table to be instantiated into variant.cpp */
 extern PinDescription g_APinDescription[];
+extern AnalogPinDescription g_AAnalogPinDescription[];
 
 #include "Serial.h"
 #if defined(SERIAL_CDC)

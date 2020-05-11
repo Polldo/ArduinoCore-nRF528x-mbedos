@@ -28,29 +28,11 @@
 static int write_resolution = 8;
 static int read_resolution = 10;
 
-#ifdef ANALOG_TEST
-/* Types used for the table below */
-typedef struct _AnalogPinDescription
-{
-  PinName name;
-  mbed::AnalogIn* adc;
-} AnalogPinDescription;
+static inline void analogConfigure(pin_size_t pin);
+static void analogUpdate();
 
-static AnalogPinDescription analogPinDescription[] = 
-{
-    // A0 - A7
-  P0_4,  NULL,     // A0
-  P0_5,  NULL,     // A1
-  P0_30, NULL,     // A2
-  P0_29, NULL,     // A3
-  P0_31, NULL,     // A4/SDA
-  P0_2,  NULL,     // A5/SCL
-  P0_28, NULL,     // A6
-  P0_3,  NULL,     // A7
-};
-
+static bool adcConfigChanged = false;
 static nrf_saadc_channel_config_t adcCurrentConfig = {
-//#define SAADC_DEFAULT_CONF = { //do this as in a define
     .resistor_p = NRF_SAADC_RESISTOR_DISABLED,
     .resistor_n = NRF_SAADC_RESISTOR_DISABLED,
     .gain       = NRF_SAADC_GAIN1_4,
@@ -61,7 +43,6 @@ static nrf_saadc_channel_config_t adcCurrentConfig = {
     .pin_p      = NRF_SAADC_INPUT_DISABLED,
     .pin_n      = NRF_SAADC_INPUT_DISABLED
 };
-#endif //ANALOG_TEST
 
 #ifdef digitalPinToPwmObj
 static mbed::PwmOut* PinNameToPwmObj(PinName P) {
@@ -114,22 +95,15 @@ void analogWriteResolution(int bits)
 
 
 
-
-
-#ifdef ANALOG_TEST
-
-static AnalogPinDescription* PinNameToAnalogPinDescription(PinName P) {
-  for (pin_size_t i=0; i <= NUM_ANALOG_INPUTS; i++) {
-    if (analogPinDescription[i].name == P) {
-      return (analogPinDescription + i);
-    }
-  }
-  return NULL;
-}
-
 int analogRead(PinName pin)
 {
-  return 0;
+  Serial.println("pin");
+  for (pin_size_t i = 0; i <= NUM_ANALOG_INPUTS; i++) {
+    if (analogPinToPinName(i) == pin) {
+      return analogRead(i + A0);
+    }
+  }
+  return -1;
 }
 
 int analogRead(pin_size_t pin)
@@ -138,15 +112,16 @@ int analogRead(pin_size_t pin)
 #ifdef ANALOG_BUG_MBED
   multiply_factor = 4;
 #endif
-  //return (mbed::AnalogIn(pin).read_u16() >> (16 - read_resolution)) * multiply_factor;
-
-  auto analogPin = &analogPinDescription[pin - A0]; 
-  auto pinAdc = analogPin->adc;
-  if (pinAdc == NULL) {
-    pinAdc = new mbed::AnalogIn(analogPin->name);
-    analogPin->adc = pinAdc;
+  mbed::AnalogIn* adc = analogPinToAdcObj(pin);
+  if (adc == NULL) {
+    adc = new mbed::AnalogIn(analogPinToPinName(pin));
+    Serial.println("new adc");
+    analogPinToAdcObj(pin) = adc;
+    if (adcConfigChanged) {
+      analogConfigure(pin);
+    }
   }
-  return (pinAdc->read_u16() >> (16 - read_resolution)) * multiply_factor;
+  return (adc->read_u16() >> (16 - read_resolution)) * multiply_factor;
 }
 
 void analogReadResolution(int bits)
@@ -154,37 +129,50 @@ void analogReadResolution(int bits)
   read_resolution = bits;
 }
 
-void analogChannelUpdate(pin_size_t pin, nrf_saadc_channel_config_t config)
+void analogReference(uint8_t mode)
 {
-  PinName pinName = analogPinDescription[pin].name;
-  uint8_t channel = (int)pinmap_find_function(pinName, PinMap_ADC);
+  nrf_saadc_reference_t reference;
+  nrf_saadc_gain_t gain;
+  if (mode == VDD) {
+    reference = NRF_SAADC_REFERENCE_VDD4;
+    gain = NRF_SAADC_GAIN1_4;
+  } else {
+    reference = NRF_SAADC_REFERENCE_INTERNAL;
+    gain = NRF_SAADC_GAIN1;
+  }
+  adcCurrentConfig.reference = reference;
+  adcCurrentConfig.gain = gain;
+  analogUpdate();
 }
 
-void analogReadConfigure(pin_size_t pin, nrf_saadc_channel_config_t config) 
+static inline void analogConfigure(pin_size_t pin)
 {
+  PinName pinName = analogPinToPinName(pin);
+  uint8_t channel = (int)pinmap_find_function(pinName, PinMap_ADC);
+  nrf_saadc_input_t input = (nrf_saadc_input_t) (channel + 1);
+  adcCurrentConfig.pin_p = input;
+  nrfx_saadc_channel_init(channel, &adcCurrentConfig);
+}
+
+static void analogUpdate() 
+{
+  /* Check if AnalogIn was initialized 
   pin_size_t numPin = pin - A0;
   auto pinAdc = analogPinDescription[numPin].adc;
   if (pinAdc == NULL) {
     return;
   }
-
+  */
+  adcConfigChanged = true;
   /* Updates already configured adc */
+  //for (pin_size_t i = A0; i <= A0 + NUM_ANALOG_INPUTS; i++) {  //also the other works
   for (pin_size_t i = 0; i <= NUM_ANALOG_INPUTS; i++) {
-    if (analogPinDescription[i].adc != NULL) {
+    if (analogPinToAdcObj(i) != NULL) {
+      analogConfigure(i);
     }
   }
-
-  nrf_saadc_input_t input = (nrf_saadc_input_t) 9; //NRF_SAADC_INPUT_DISABLED;
-
-  PinName pinName = analogPinDescription[numPin].name;
-  uint8_t channel = (int)pinmap_find_function(pinName, PinMap_ADC);
-  //Serial.println(channel);
-
-
-  nrfx_saadc_channel_init(channel, &config);
-
-  /* Store channel in ADC object. */
   //obj->channel = channel; //the channel should be already assigned in the first adc init 
+  // Also this init does not use the mbed mutex --> CRITICAL !
+  // These are two weakness of this method. To solve them the mbed library should be modified.
 }
 
-#endif //ANALOG_TEST
