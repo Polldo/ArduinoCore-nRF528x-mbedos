@@ -142,9 +142,15 @@ void analogReference(uint8_t mode)
   if (mode == AR_VDD) {
     reference = NRF_SAADC_REFERENCE_VDD4;
     gain = NRF_SAADC_GAIN1_4;
-  } else {
+  } else if (mode == AR_INTERNAL) {
     reference = NRF_SAADC_REFERENCE_INTERNAL;
     gain = NRF_SAADC_GAIN1;
+  } else if (mode == AR_INTERNAL1V2) {
+    reference = NRF_SAADC_REFERENCE_INTERNAL;
+    gain = NRF_SAADC_GAIN1_2;
+  } else if (mode == AR_INTERNAL2V4) {
+    reference = NRF_SAADC_REFERENCE_INTERNAL;
+    gain = NRF_SAADC_GAIN1_4;
   }
   adcCurrentConfig.reference = reference;
   adcCurrentConfig.gain = gain;

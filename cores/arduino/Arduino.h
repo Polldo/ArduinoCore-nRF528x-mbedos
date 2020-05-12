@@ -72,12 +72,13 @@ extern "C"{
 
 /* Analog reference options 
  * Different possibilities available combining Reference and Gain
- * 
  */
 typedef enum
 {
-  AR_VDD,
-  AR_INTERNAL
+  AR_VDD,         // 3.3 V
+  AR_INTERNAL,    // 0.6 V
+  AR_INTERNAL1V2, // 1.2 V
+  AR_INTERNAL2V4  // 2.4 V
 } AnalogReferenceMode;
 
 // We provide analogReadResolution and analogWriteResolution APIs
