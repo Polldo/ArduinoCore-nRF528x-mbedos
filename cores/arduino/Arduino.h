@@ -81,6 +81,19 @@ typedef enum
   AR_INTERNAL2V4  // 2.4 V
 } AnalogReferenceMode;
 
+/* Analog acquisition time options */
+typedef enum
+{
+  AT_3_US,         
+  AT_5_US,    
+  AT_10_US, // Default value
+  AT_15_US,
+  AT_20_US,  
+  AT_40_US  
+} AnalogAcquisitionTime;
+
+/* nRF specific function to change analog acquisition time */
+void analogAcquisitionTime(uint8_t time);
 // We provide analogReadResolution and analogWriteResolution APIs
 void analogReadResolution(int bits);
 void analogWriteResolution(int bits);

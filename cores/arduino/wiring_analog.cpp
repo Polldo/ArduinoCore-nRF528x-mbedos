@@ -157,6 +157,26 @@ void analogReference(uint8_t mode)
   analogUpdate();
 }
 
+void analogAcquisitionTime(uint8_t time)
+{
+  nrf_saadc_acqtime_t acqTime;
+  if (time == AT_3_US) {
+    acqTime = NRF_SAADC_ACQTIME_3US;
+  } else if (time == AT_5_US) {
+    acqTime = NRF_SAADC_ACQTIME_5US;
+  } else if (time == AT_10_US) {
+    acqTime = NRF_SAADC_ACQTIME_10US;
+  } else if (time == AT_15_US) {
+    acqTime = NRF_SAADC_ACQTIME_15US;
+  } else if (time == AT_20_US) {
+    acqTime = NRF_SAADC_ACQTIME_20US;
+  } else if (time == AT_40_US) {
+    acqTime = NRF_SAADC_ACQTIME_40US;
+  }
+  adcCurrentConfig.acq_time = acqTime;
+  analogUpdate();
+}
+
 /*
  * Bypass mbed and use directly Nordic libraries in order to reinitialize 
  * the channel associated to the selected pin with a custom configuration 
