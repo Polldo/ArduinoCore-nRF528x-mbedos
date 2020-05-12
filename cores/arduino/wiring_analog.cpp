@@ -28,10 +28,13 @@
 static int write_resolution = 8;
 static int read_resolution = 10;
 
-static inline void analogConfigure(pin_size_t pin);
-static void analogUpdate();
-
+/* Flag to indicate wheter the config has been changed from the default one */
 static bool adcConfigChanged = false;
+
+/* 
+ * Configuration used for all the active ADC channels, it is initialized with the mbed default values
+ * When it is changed, all the ADC channels are reconfigured accordingly 
+ */
 static nrf_saadc_channel_config_t adcCurrentConfig = {
     .resistor_p = NRF_SAADC_RESISTOR_DISABLED,
     .resistor_n = NRF_SAADC_RESISTOR_DISABLED,
@@ -43,6 +46,10 @@ static nrf_saadc_channel_config_t adcCurrentConfig = {
     .pin_p      = NRF_SAADC_INPUT_DISABLED,
     .pin_n      = NRF_SAADC_INPUT_DISABLED
 };
+
+/* Private function to reconfigure already active ADC channels */
+static inline void analogConfigure(pin_size_t pin);
+static void analogUpdate();
 
 #ifdef digitalPinToPwmObj
 static mbed::PwmOut* PinNameToPwmObj(PinName P) {
@@ -92,12 +99,8 @@ void analogWriteResolution(int bits)
   write_resolution = bits;
 }
 
-
-
-
 int analogRead(PinName pin)
 {
-  Serial.println("pin");
   for (pin_size_t i = 0; i <= NUM_ANALOG_INPUTS; i++) {
     if (analogPinToPinName(i) == pin) {
       return analogRead(i + A0);
@@ -106,6 +109,10 @@ int analogRead(PinName pin)
   return -1;
 }
 
+/* Weaknesses of this method:
+ * - ADC channels should be firstly init with mbed functions and then can be reconfigured. 
+ * - ADC reconfiguration does not use the mbed mutex --> could be CRITICAL 
+ * To solve them, the mbed library should be modified. */
 int analogRead(pin_size_t pin)
 {
   int multiply_factor = 1;
@@ -115,7 +122,6 @@ int analogRead(pin_size_t pin)
   mbed::AnalogIn* adc = analogPinToAdcObj(pin);
   if (adc == NULL) {
     adc = new mbed::AnalogIn(analogPinToPinName(pin));
-    Serial.println("new adc");
     analogPinToAdcObj(pin) = adc;
     if (adcConfigChanged) {
       analogConfigure(pin);
@@ -133,7 +139,7 @@ void analogReference(uint8_t mode)
 {
   nrf_saadc_reference_t reference;
   nrf_saadc_gain_t gain;
-  if (mode == VDD) {
+  if (mode == AR_VDD) {
     reference = NRF_SAADC_REFERENCE_VDD4;
     gain = NRF_SAADC_GAIN1_4;
   } else {
@@ -145,6 +151,10 @@ void analogReference(uint8_t mode)
   analogUpdate();
 }
 
+/*
+ * Bypass mbed and use directly Nordic libraries in order to reinitialize 
+ * the channel associated to the selected pin with a custom configuration 
+ */
 static inline void analogConfigure(pin_size_t pin)
 {
   PinName pinName = analogPinToPinName(pin);
@@ -154,25 +164,15 @@ static inline void analogConfigure(pin_size_t pin)
   nrfx_saadc_channel_init(channel, &adcCurrentConfig);
 }
 
+/* Spot all active ADCs to reconfigure them */
 static void analogUpdate() 
 {
-  /* Check if AnalogIn was initialized 
-  pin_size_t numPin = pin - A0;
-  auto pinAdc = analogPinDescription[numPin].adc;
-  if (pinAdc == NULL) {
-    return;
-  }
-  */
   adcConfigChanged = true;
-  /* Updates already configured adc */
   //for (pin_size_t i = A0; i <= A0 + NUM_ANALOG_INPUTS; i++) {  //also the other works
   for (pin_size_t i = 0; i <= NUM_ANALOG_INPUTS; i++) {
     if (analogPinToAdcObj(i) != NULL) {
       analogConfigure(i);
     }
   }
-  //obj->channel = channel; //the channel should be already assigned in the first adc init 
-  // Also this init does not use the mbed mutex --> CRITICAL !
-  // These are two weakness of this method. To solve them the mbed library should be modified.
 }
 

@@ -76,14 +76,13 @@ extern "C"{
  */
 typedef enum
 {
-  VDD,
-  INTERNAL
+  AR_VDD,
+  AR_INTERNAL
 } AnalogReferenceMode;
 
 // We provide analogReadResolution and analogWriteResolution APIs
 void analogReadResolution(int bits);
 void analogWriteResolution(int bits);
-void analogReference(uint8_t mode);
 
 
 #ifdef __cplusplus
