@@ -1,0 +1,36 @@
+From a4ecc1d5189fce3b4306fd3afad3e46e7d66f2bc Mon Sep 17 00:00:00 2001
+From: Paolo Calao <paolo.calao@gmail.com>
+Date: Wed, 26 Aug 2020 17:57:42 +0200
+Subject: [PATCH 1/1] Cordio Add sendCmplt Callback for updating NumCmplPckts
+ on disconnection
+
+---
+ .../stack/controller/sources/ble/lctr/lctr_main_conn.c      | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/features/FEATURE_BLE/targets/TARGET_CORDIO_LL/stack/controller/sources/ble/lctr/lctr_main_conn.c b/features/FEATURE_BLE/targets/TARGET_CORDIO_LL/stack/controller/sources/ble/lctr/lctr_main_conn.c
+index b3e7e61e2b..f1ac0c853d 100644
+--- a/features/FEATURE_BLE/targets/TARGET_CORDIO_LL/stack/controller/sources/ble/lctr/lctr_main_conn.c
++++ b/features/FEATURE_BLE/targets/TARGET_CORDIO_LL/stack/controller/sources/ble/lctr/lctr_main_conn.c
+@@ -455,14 +455,16 @@ void lctrFreeConnCtx(lctrConnCtx_t *pCtx)
+     WsfMsgFree(pBuf);
+   }
+ 
++  uint16_t handle = LCTR_GET_CONN_HANDLE(pCtx);
++
++  lmgrPersistCb.sendCompCback(handle, numTxBufs);
++
+   /* Cleanup timers. */
+   WsfTimerStop(&pCtx->tmrSupTimeout);
+   WsfTimerStop(&pCtx->tmrProcRsp);
+   WsfTimerStop(&pCtx->tmrPingTimeout);
+   WsfTimerStop(&pCtx->tmrAuthTimeout);
+ 
+-  uint16_t handle = LCTR_GET_CONN_HANDLE(pCtx);
+-
+   /* VS cleanup. */
+   if (pLctrVsHdlrs && pLctrVsHdlrs->connCleanup)
+   {
+-- 
+2.25.1
+
