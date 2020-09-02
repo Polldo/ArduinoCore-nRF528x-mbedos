@@ -264,8 +264,6 @@ for tuple in "${TUPLES[@]}"; do
     IFS="$OLD_IFS"
 done
 
-export REMOTE_BRANCH="origin/mbed-os-5.15"
-
 export MBED_CORE_LOCATION=${MBED_CORE_LOCATION:-$PWD}
 export MBED_CLEAN=${MBED_CLEAN:-0}
 export MBED_UPDATE=${MBED_UPDATE:-0}
@@ -329,4 +327,3 @@ Using Arduino as an mbed library
 
 echo -e "arduino/cores/arduino/main.cpp\n arduino/cores/arduino/mbed/\narduino/libraries/" > .mbedignore
 #add ARDUINO_AS_MBED_LIBRARY=1 to macros section in mbed_app.json
-echo "https://github.com/arduino/ArduinoCore-mbed#bf6e64771ebe20285b0364756dff856ebbc679dc" > arduino.lib
