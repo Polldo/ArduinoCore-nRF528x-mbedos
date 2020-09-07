@@ -243,7 +243,6 @@
 #define MBED_CONF_MBED_MESH_API_WISUN_BC_DWELL_INTERVAL                       0                                                                                                // set by library:mbed-mesh-api
 #define MBED_CONF_MBED_MESH_API_WISUN_BC_FIXED_CHANNEL                        0xffff                                                                                           // set by library:mbed-mesh-api
 #define MBED_CONF_MBED_MESH_API_WISUN_BC_INTERVAL                             0                                                                                                // set by library:mbed-mesh-api
-#define MBED_CONF_MBED_MESH_API_WISUN_DEVICE_TYPE                             MESH_DEVICE_TYPE_WISUN_ROUTER                                                                    // set by library:mbed-mesh-api
 #define MBED_CONF_MBED_MESH_API_WISUN_NETWORK_NAME                            "Wi-SUN Network"                                                                                 // set by library:mbed-mesh-api
 #define MBED_CONF_MBED_MESH_API_WISUN_OPERATING_CLASS                         255                                                                                              // set by library:mbed-mesh-api
 #define MBED_CONF_MBED_MESH_API_WISUN_OPERATING_MODE                          255                                                                                              // set by library:mbed-mesh-api
@@ -257,8 +256,6 @@
 #define MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_DISPATCH_FROM_APPLICATION          0                                                                                                // set by library:nanostack-hal
 #define MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_THREAD_STACK_SIZE                  6144                                                                                             // set by library:nanostack-hal
 #define MBED_CONF_NANOSTACK_HAL_EVENT_LOOP_USE_MBED_EVENTS                    0                                                                                                // set by library:nanostack-hal
-#define MBED_CONF_NANOSTACK_HAL_KVSTORE_PATH                                  "/kv/"                                                                                           // set by library:nanostack-hal
-#define MBED_CONF_NANOSTACK_HAL_USE_KVSTORE                                   0                                                                                                // set by library:nanostack-hal
 #define MBED_CONF_NORDIC_NRF_LF_CLOCK_CALIB_MODE_CONFIG                       0                                                                                                // set by target:MCU_NRF52840
 #define MBED_CONF_NORDIC_NRF_LF_CLOCK_CALIB_TIMER_INTERVAL                    16                                                                                               // set by target:MCU_NRF52840
 #define MBED_CONF_NORDIC_NRF_LF_CLOCK_SRC                                     NRF_LF_SRC_XTAL                                                                                  // set by target:MCU_NRF52840
@@ -397,6 +394,7 @@
 #define LL_MAX_PER_SCAN                                                       3                                                                                                // defined by library:cordio-nordic-ll
 #define MBEDTLS_CIPHER_MODE_CTR                                                                                                                                                // defined by library:SecureStore
 #define MBEDTLS_CMAC_C                                                                                                                                                         // defined by library:SecureStore
+#define MBEDTLS_PSA_HAS_ITS_IO                                                                                                                                                 // defined by library:mbed-crypto
 #define MBED_HEAP_STATS_ENABLED                                               1                                                                                                // defined by application
 #define MBED_MEM_TRACING_ENABLED                                              1                                                                                                // defined by application
 #define MBED_STACK_STATS_ENABLED                                              1                                                                                                // defined by application
@@ -404,7 +402,7 @@
 #define NSAPI_PPP_AVAILABLE                                                   (MBED_CONF_PPP_ENABLED || MBED_CONF_LWIP_PPP_ENABLED)                                            // defined by library:ppp
 #define NS_USE_EXTERNAL_MBED_TLS                                                                                                                                               // defined by library:nanostack
 #define UNITY_INCLUDE_CONFIG_H                                                                                                                                                 // defined by library:utest
-#define WSF_MS_PER_TICK                                                       10                                                                                               // defined by library:cordio
+#define WSF_MS_PER_TICK                                                       1                                                                                                // defined by library:cordio
 #define _RTE_                                                                                                                                                                  // defined by library:rtos
 
 #endif
