@@ -113,7 +113,7 @@
     defined(MBEDTLS_SSL_CLI_C) && \
     defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
     defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
-#define MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED
+#define MBEDTLS_SSL__ECP_RESTARTABLE
 #endif
 
 #define MBEDTLS_SSL_INITIAL_HANDSHAKE           0
@@ -238,7 +238,7 @@
    implicit sequence number. */
 #define MBEDTLS_SSL_HEADER_LEN 13
 
-#if !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 #define MBEDTLS_SSL_IN_BUFFER_LEN  \
     ( ( MBEDTLS_SSL_HEADER_LEN ) + ( MBEDTLS_SSL_IN_PAYLOAD_LEN ) )
 #else
@@ -247,39 +247,13 @@
       + ( MBEDTLS_SSL_CID_IN_LEN_MAX ) )
 #endif
 
-#if !defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
 #define MBEDTLS_SSL_OUT_BUFFER_LEN  \
     ( ( MBEDTLS_SSL_HEADER_LEN ) + ( MBEDTLS_SSL_OUT_PAYLOAD_LEN ) )
 #else
 #define MBEDTLS_SSL_OUT_BUFFER_LEN                               \
     ( ( MBEDTLS_SSL_HEADER_LEN ) + ( MBEDTLS_SSL_OUT_PAYLOAD_LEN )    \
       + ( MBEDTLS_SSL_CID_OUT_LEN_MAX ) )
-#endif
-
-#if defined(MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH)
-static inline uint32_t mbedtls_ssl_get_output_buflen( const mbedtls_ssl_context *ctx )
-{
-#if defined (MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    return (uint32_t) mbedtls_ssl_get_output_max_frag_len( ctx )
-               + MBEDTLS_SSL_HEADER_LEN + MBEDTLS_SSL_PAYLOAD_OVERHEAD
-               + MBEDTLS_SSL_CID_OUT_LEN_MAX;
-#else
-    return (uint32_t) mbedtls_ssl_get_output_max_frag_len( ctx )
-               + MBEDTLS_SSL_HEADER_LEN + MBEDTLS_SSL_PAYLOAD_OVERHEAD;
-#endif
-}
-
-static inline uint32_t mbedtls_ssl_get_input_buflen( const mbedtls_ssl_context *ctx )
-{
-#if defined (MBEDTLS_SSL_DTLS_CONNECTION_ID)
-    return (uint32_t) mbedtls_ssl_get_input_max_frag_len( ctx )
-               + MBEDTLS_SSL_HEADER_LEN + MBEDTLS_SSL_PAYLOAD_OVERHEAD
-               + MBEDTLS_SSL_CID_IN_LEN_MAX;
-#else
-    return (uint32_t) mbedtls_ssl_get_input_max_frag_len( ctx )
-               + MBEDTLS_SSL_HEADER_LEN + MBEDTLS_SSL_PAYLOAD_OVERHEAD;
-#endif
-}
 #endif
 
 #ifdef MBEDTLS_ZLIB_SUPPORT
@@ -304,7 +278,7 @@ extern "C" {
 #endif
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
-    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
 /*
  * Abstraction for a grid of allowed signature-hash-algorithm pairs.
  */
@@ -319,7 +293,7 @@ struct mbedtls_ssl_sig_hash_set_t
     mbedtls_md_type_t ecdsa;
 };
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2 &&
-          MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+          MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
 
 typedef int  mbedtls_ssl_tls_prf_cb( const unsigned char *secret, size_t slen,
                                      const char *label,
@@ -335,7 +309,7 @@ struct mbedtls_ssl_handshake_params
      */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
-    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
     mbedtls_ssl_sig_hash_set_t hash_algs;             /*!<  Set of suitable sig-hash pairs */
 #endif
 #if defined(MBEDTLS_DHM_C)
@@ -364,13 +338,13 @@ struct mbedtls_ssl_handshake_params
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
     const mbedtls_ecp_curve_info **curves;      /*!<  Supported elliptic curves */
 #endif
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
     psa_key_handle_t psk_opaque;        /*!< Opaque PSK from the callback   */
 #endif /* MBEDTLS_USE_PSA_CRYPTO */
     unsigned char *psk;                 /*!<  PSK from the callback         */
     size_t psk_len;                     /*!<  Length of PSK from callback   */
-#endif /* MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED */
+#endif /* MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED */
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_ssl_key_cert *key_cert;     /*!< chosen key/cert pair (server)  */
 #if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
@@ -380,7 +354,7 @@ struct mbedtls_ssl_handshake_params
     mbedtls_x509_crl *sni_ca_crl;       /*!< trusted CAs CRLs from SNI      */
 #endif /* MBEDTLS_SSL_SERVER_NAME_INDICATION */
 #endif /* MBEDTLS_X509_CRT_PARSE_C */
-#if defined(MBEDTLS_SSL_ECP_RESTARTABLE_ENABLED)
+#if defined(MBEDTLS_SSL__ECP_RESTARTABLE)
     int ecrs_enabled;                   /*!< Handshake supports EC restart? */
     mbedtls_x509_crt_restart_ctx ecrs_ctx;  /*!< restart context            */
     enum { /* this complements ssl->state with info on intra-state operations */
@@ -772,7 +746,7 @@ struct mbedtls_ssl_flight_item
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2) && \
-    defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+    defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
 
 /* Find an entry in a signature-hash set matching a given hash algorithm. */
 mbedtls_md_type_t mbedtls_ssl_sig_hash_set_find( mbedtls_ssl_sig_hash_set_t *set,
@@ -792,7 +766,7 @@ static inline void mbedtls_ssl_sig_hash_set_init( mbedtls_ssl_sig_hash_set_t *se
 }
 
 #endif /* MBEDTLS_SSL_PROTO_TLS1_2) &&
-          MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED */
+          MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED */
 
 /**
  * \brief           Free referenced items in an SSL transform context and clear
@@ -919,7 +893,7 @@ int mbedtls_ssl_write_finished( mbedtls_ssl_context *ssl );
 void mbedtls_ssl_optimize_checksum( mbedtls_ssl_context *ssl,
                             const mbedtls_ssl_ciphersuite_t *ciphersuite_info );
 
-#if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE__SOME__PSK_ENABLED)
 int mbedtls_ssl_psk_derive_premaster( mbedtls_ssl_context *ssl, mbedtls_key_exchange_type_t key_ex );
 #endif
 
@@ -937,7 +911,7 @@ int mbedtls_ssl_set_calc_verify_md( mbedtls_ssl_context *ssl, int md );
 int mbedtls_ssl_check_curve( const mbedtls_ssl_context *ssl, mbedtls_ecp_group_id grp_id );
 #endif
 
-#if defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
+#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED)
 int mbedtls_ssl_check_sig_hash( const mbedtls_ssl_context *ssl,
                                 mbedtls_md_type_t md );
 #endif

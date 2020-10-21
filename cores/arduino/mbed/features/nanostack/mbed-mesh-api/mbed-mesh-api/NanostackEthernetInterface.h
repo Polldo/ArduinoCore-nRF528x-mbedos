@@ -29,7 +29,6 @@ public:
                                   bool blocking = true);
     virtual nsapi_error_t bringdown();
 
-    char *get_interface_name(char *buf);
 private:
     friend class Nanostack;
     friend class NanostackEthernetInterface;
